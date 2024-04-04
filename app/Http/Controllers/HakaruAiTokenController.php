@@ -45,7 +45,6 @@ class HakaruAiTokenController extends Controller
     // トークン更新のロジック
     $token = HakaruAiToken::latest()->first();
     $refreshToken = $token->refresh_token;
-
     $response = Http::withHeaders([
       'Content-Type' => 'application/json',
     ])->post(
@@ -65,6 +64,10 @@ class HakaruAiTokenController extends Controller
       $token->save();
 
       return $newAccessToken;
+    } else {
+      // 新しくトークンを取得する
+      $accessToken = $this->accessToken();
+      return $accessToken;
     }
 
     return response()->json(['message' => 'アクセストークンの更新に失敗しました。'], 500);
@@ -74,12 +77,10 @@ class HakaruAiTokenController extends Controller
   {
     $token = HakaruAiToken::latest()->first();
     $accessToken = $token->access_token;
-
     // トークンの有効期限確認
     if (now()->greaterThanOrEqualTo($token->expires_at)) {
       $accessToken = $this->refreshToken($token->refresh_token);
     }
-
     // 画像アップロードとAPIリクエストのロジック
     if ($request->hasFile('image') && $request->file('image')->isValid()) {
       $encryptedAccessToken = HakaruAiToken::latest()->first()->access_token;

@@ -5,13 +5,13 @@
 <div id="result"></div>
 
 <script>
-  $csrfToken = '{{ csrf_token() }}';
+  const csrfToken = '{{ csrf_token() }}';
   document.getElementById('imageUploadForm').addEventListener('submit', function(e) {
     e.preventDefault();
     fetch('/hakaru-ai/upload-image', {
         method: 'POST',
         headers: {
-          'X-CSRF-TOKEN': $csrfToken,
+          'X-CSRF-TOKEN': csrfToken,
         },
         body: new FormData(e.target),
       })
