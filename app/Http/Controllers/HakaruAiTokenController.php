@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\HakaruAiToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class HakaruAiTokenController extends Controller
 {
@@ -81,15 +83,29 @@ class HakaruAiTokenController extends Controller
     if (now()->greaterThanOrEqualTo($token->expires_at)) {
       $accessToken = $this->refreshToken($token->refresh_token);
     }
+
+    // ファイルの整形
+    $image = $request->file('image'); // 'image'はフォームのinput名
+    $filename = 'cropped-' . time() . '.' . $image->getClientOriginalExtension();
+    // 画像を読み込み
+    $manager = new ImageManager(new Driver());
+
+    $img = $manager->read($image);
+    // 画像を正方形に切り出す
+    $img->cover(144, 144); // 例として300x300サイズ
+    // 画像をストレージに保存
+    $path = storage_path('app/public/' . $filename);
+    $img->save($path);
+
     // 画像アップロードとAPIリクエストのロジック
     if ($request->hasFile('image') && $request->file('image')->isValid()) {
       $encryptedAccessToken = HakaruAiToken::latest()->first()->access_token;
       $accessToken = decrypt($encryptedAccessToken);
-      $image = base64_encode(file_get_contents($request->file('image')));
+      $image = base64_encode(file_get_contents($path));
       $response = Http::withHeaders([
         'Authorization' => 'Bearer ' . $accessToken,
         'Content-Type' => 'application/json',
-      ])->post('https://public-api.hakaru.ai/v1/resources/images/meter_type/MET0005', [
+      ])->post('https://public-api.hakaru.ai/v1/resources/images/meter_type/MET0009', [
         'image' => $image
       ]);
 
